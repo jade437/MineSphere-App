@@ -1,0 +1,1835 @@
+<!doctype html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MineSphere Monitor Dashboard</title>
+  <script src="/_sdk/data_sdk.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      box-sizing: border-box;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    html, body {
+      height: 100%;
+      width: 100%;
+    }
+    
+    .status-indicator {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: .7;
+      }
+    }
+    
+    .metric-card {
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .metric-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    }
+    
+    .alert-item {
+      transition: background-color 0.2s ease;
+    }
+    
+    .alert-item:hover {
+      background-color: rgba(0, 0, 0, 0.02);
+    }
+    
+    .loading-spinner {
+      border: 3px solid rgba(0, 0, 0, 0.1);
+      border-radius: 50%;
+      border-top-color: #22c55e;
+      width: 24px;
+      height: 24px;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .tab-button {
+      transition: all 0.3s ease;
+    }
+    
+    .tab-button.active {
+      border-bottom: 3px solid #22c55e;
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+ </head>
+ <body class="w-full bg-gray-50">
+  <div class="w-full min-h-full flex flex-col"><!-- Header -->
+   <header class="w-full bg-gradient-to-r from-blue-900 to-blue-800 text-white py-4 px-6 shadow-lg">
+    <div class="max-w-7xl mx-auto">
+     <div class="flex justify-between items-center mb-4">
+      <div class="flex items-center gap-3">
+       <svg width="40" height="40" viewbox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><ellipse cx="50" cy="75" rx="35" ry="8" fill="#fbbf24" opacity="0.3" /> <path d="M 25 60 Q 25 35 50 30 Q 75 35 75 60 L 70 65 Q 70 45 50 40 Q 30 45 30 65 Z" fill="#fbbf24" /> <rect x="20" y="60" width="60" height="8" rx="2" fill="#f59e0b" /> <circle cx="35" cy="50" r="4" fill="#22c55e" /> <circle cx="50" cy="45" r="4" fill="#22c55e" /> <circle cx="65" cy="50" r="4" fill="#22c55e" /> <line x1="35" y1="50" x2="50" y2="45" stroke="#60a5fa" stroke-width="2" /> <line x1="50" y1="45" x2="65" y2="50" stroke="#60a5fa" stroke-width="2" />
+       </svg>
+       <div>
+        <h1 class="text-2xl font-bold" id="dashboard-title">MineSphere Monitor</h1>
+        <p class="text-sm opacity-90" id="mine-name">South African Mining Operations</p>
+       </div>
+      </div>
+      <div class="flex items-center gap-4">
+       <div class="text-right">
+        <div class="text-xs opacity-75">
+         Last Updated
+        </div>
+        <div class="text-sm font-semibold" id="last-update-time">
+         --:--
+        </div>
+       </div>
+       <div class="flex items-center gap-2 bg-green-500 px-4 py-2 rounded-full"><span class="status-indicator w-3 h-3 bg-white rounded-full"></span> <span class="text-sm font-semibold">System Active</span>
+       </div>
+      </div>
+     </div>
+    </div>
+   </header><!-- Navigation Tabs -->
+   <nav class="w-full bg-white border-b border-gray-200 px-6">
+    <div class="max-w-7xl mx-auto flex gap-1"><button class="tab-button active px-6 py-3 font-semibold text-gray-700" data-tab="overview">Overview</button> <button class="tab-button px-6 py-3 font-semibold text-gray-500 hover:text-gray-700" data-tab="sensors">Sensors</button> <button class="tab-button px-6 py-3 font-semibold text-gray-500 hover:text-gray-700" data-tab="devices">IoT Devices</button> <button class="tab-button px-6 py-3 font-semibold text-gray-500 hover:text-gray-700" data-tab="alerts">Alerts</button> <button class="tab-button px-6 py-3 font-semibold text-gray-500 hover:text-gray-700" data-tab="compliance">Compliance</button> <button class="tab-button px-6 py-3 font-semibold text-gray-500 hover:text-gray-700" data-tab="reports">Reports</button>
+    </div>
+   </nav><!-- Main Content -->
+   <main class="w-full flex-1 px-6 py-6">
+    <div class="max-w-7xl mx-auto"><!-- Overview Tab -->
+     <div id="overview-tab" class="tab-content"><!-- Key Metrics -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+       <div class="metric-card bg-white p-6 rounded-lg shadow-md border-l-4 border-green-500">
+        <div class="text-sm text-gray-600 mb-2">
+         Active Devices
+        </div>
+        <div class="text-3xl font-bold text-gray-800" id="active-devices">
+         0
+        </div>
+        <div class="text-xs text-green-600 mt-2">
+         All Operational
+        </div>
+       </div>
+       <div class="metric-card bg-white p-6 rounded-lg shadow-md border-l-4 border-red-500">
+        <div class="text-sm text-gray-600 mb-2">
+         Critical Alerts
+        </div>
+        <div class="text-3xl font-bold text-gray-800" id="critical-alerts">
+         0
+        </div>
+        <div class="text-xs text-red-600 mt-2" id="critical-label">
+         Requires Attention
+        </div>
+       </div>
+       <div class="metric-card bg-white p-6 rounded-lg shadow-md border-l-4 border-yellow-500">
+        <div class="text-sm text-gray-600 mb-2">
+         Warnings
+        </div>
+        <div class="text-3xl font-bold text-gray-800" id="warning-alerts">
+         0
+        </div>
+        <div class="text-xs text-yellow-600 mt-2" id="warning-label">
+         Monitor Closely
+        </div>
+       </div>
+       <div class="metric-card bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-500">
+        <div class="text-sm text-gray-600 mb-2">
+         Compliance Score
+        </div>
+        <div class="text-3xl font-bold text-gray-800">
+         98%
+        </div>
+        <div class="text-xs text-blue-600 mt-2">
+         Excellent Status
+        </div>
+       </div>
+      </div><!-- Real-Time Sensor Readings -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+       <div class="bg-white p-6 rounded-lg shadow-md">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">Environmental Monitoring</h3>
+        <div id="environmental-readings" class="space-y-4">
+         <div class="text-center py-4 text-gray-500">
+          <p class="text-sm">No environmental sensors connected</p>
+         </div>
+        </div>
+       </div>
+       <div class="bg-white p-6 rounded-lg shadow-md">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">Gas Detection</h3>
+        <div id="gas-readings" class="space-y-4">
+         <div class="text-center py-4 text-gray-500">
+          <p class="text-sm">No gas detection sensors connected</p>
+         </div>
+        </div>
+       </div>
+      </div><!-- Equipment Status -->
+      <div class="bg-white p-6 rounded-lg shadow-md">
+       <h3 class="text-lg font-bold text-gray-800 mb-4">Other Sensors &amp; Equipment</h3>
+       <div id="equipment-readings" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="text-center py-8 text-gray-500 col-span-full">
+         <p class="text-sm">No equipment sensors connected</p>
+        </div>
+       </div>
+      </div>
+     </div><!-- Sensors Tab -->
+     <div id="sensors-tab" class="tab-content hidden">
+      <div class="bg-white rounded-lg shadow-md p-6">
+       <div class="flex justify-between items-center mb-6">
+        <h3 class="text-xl font-bold text-gray-800">Connected Sensors - Live Data</h3>
+        <div class="text-sm text-gray-600"><span class="font-semibold" id="active-sensor-count">0</span> Active Sensors
+        </div>
+       </div><!-- Sensor Grid -->
+       <div id="sensors-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="text-center py-12 col-span-full text-gray-500">
+         <svg class="w-16 h-16 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+         </svg>
+         <p>No sensors connected yet.</p>
+         <p class="text-sm mt-1">Add IoT devices in the "IoT Devices" tab to start monitoring.</p>
+        </div>
+       </div>
+      </div>
+     </div><!-- IoT Devices Tab -->
+     <div id="devices-tab" class="tab-content hidden">
+      <div class="bg-white rounded-lg shadow-md p-6">
+       <div class="flex justify-between items-center mb-6">
+        <h3 class="text-xl font-bold text-gray-800">IoT Device &amp; Sensor Management</h3><button id="add-sensor-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors"> + Add New Sensor </button>
+       </div><!-- Sensor Form -->
+       <div id="sensor-form-container" class="hidden mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+        <h4 class="font-semibold text-gray-700 mb-3">Register New IoT Sensor</h4>
+        <form id="sensor-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+         <div><label for="sensor-name" class="block text-sm font-medium text-gray-700 mb-1">Sensor Name</label> <input type="text" id="sensor-name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="e.g., Methane Sensor A1" required>
+         </div>
+         <div><label for="sensor-device-id" class="block text-sm font-medium text-gray-700 mb-1">Device ID</label> <input type="text" id="sensor-device-id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="e.g., IOT-CH4-001" required>
+         </div>
+         <div><label for="sensor-category" class="block text-sm font-medium text-gray-700 mb-1">Sensor Category</label> <select id="sensor-category" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" required> <option value="">Select category</option> <option value="Gas Detection">Gas Detection</option> <option value="Temperature">Temperature</option> <option value="Humidity">Humidity</option> <option value="Air Quality">Air Quality</option> <option value="Pressure">Pressure</option> <option value="Vibration">Vibration</option> <option value="Motion">Motion</option> <option value="Other">Other</option> </select>
+         </div>
+         <div><label for="sensor-location" class="block text-sm font-medium text-gray-700 mb-1">Installation Location</label> <input type="text" id="sensor-location" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="e.g., Shaft A - Level 3" required>
+         </div>
+         <div><label for="sensor-unit" class="block text-sm font-medium text-gray-700 mb-1">Measurement Unit</label> <input type="text" id="sensor-unit" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="e.g., ppm, °C, %" required>
+         </div>
+         <div><label for="sensor-min" class="block text-sm font-medium text-gray-700 mb-1">Min Safe Threshold</label> <input type="number" step="0.01" id="sensor-min" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="0" required>
+         </div>
+         <div><label for="sensor-max" class="block text-sm font-medium text-gray-700 mb-1">Max Safe Threshold</label> <input type="number" step="0.01" id="sensor-max" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="100" required>
+         </div>
+         <div><label for="sensor-initial-reading" class="block text-sm font-medium text-gray-700 mb-1">Initial Reading (Optional)</label> <input type="text" id="sensor-initial-reading" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="e.g., 0.3">
+         </div>
+         <div class="md:col-span-2 flex gap-3"><button type="submit" id="submit-sensor-btn" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors"> Register Sensor </button> <button type="button" id="cancel-sensor-btn" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-2 rounded-lg font-semibold transition-colors"> Cancel </button>
+         </div>
+        </form>
+       </div><!-- Sensors List -->
+       <div id="device-sensors-list" class="space-y-3">
+        <div class="text-center py-8 text-gray-500">
+         <svg class="w-16 h-16 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+         </svg>
+         <p>No IoT sensors registered yet. Click "Add New Sensor" to connect your first device.</p>
+        </div>
+       </div>
+      </div>
+     </div><!-- Alerts Tab -->
+     <div id="alerts-tab" class="tab-content hidden">
+      <div class="bg-white rounded-lg shadow-md p-6">
+       <div class="flex justify-between items-center mb-6">
+        <h3 class="text-xl font-bold text-gray-800">Alert Management</h3><button id="add-alert-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors"> + Log New Alert </button>
+       </div><!-- Alert Form (Hidden by default) -->
+       <div id="alert-form-container" class="hidden mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+        <h4 class="font-semibold text-gray-700 mb-3">New Alert Entry</h4>
+        <form id="alert-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+         <div><label for="alert-location" class="block text-sm font-medium text-gray-700 mb-1">Location</label> <input type="text" id="alert-location" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="e.g., Shaft A - Level 3" required>
+         </div>
+         <div><label for="alert-sensor" class="block text-sm font-medium text-gray-700 mb-1">Sensor Type</label> <select id="alert-sensor" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" required> <option value="">Select sensor type</option> <option value="Gas Detection">Gas Detection</option> <option value="Temperature">Temperature</option> <option value="Air Quality">Air Quality</option> <option value="Equipment">Equipment</option> <option value="Vibration">Vibration</option> <option value="Other">Other</option> </select>
+         </div>
+         <div><label for="alert-severity" class="block text-sm font-medium text-gray-700 mb-1">Severity</label> <select id="alert-severity" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" required> <option value="">Select severity</option> <option value="Critical">Critical</option> <option value="Warning">Warning</option> <option value="Info">Info</option> </select>
+         </div>
+         <div><label for="alert-reading" class="block text-sm font-medium text-gray-700 mb-1">Reading Value</label> <input type="text" id="alert-reading" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="e.g., 2.1% CH4" required>
+         </div>
+         <div class="md:col-span-2"><label for="alert-notes" class="block text-sm font-medium text-gray-700 mb-1">Notes</label> <textarea id="alert-notes" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none" placeholder="Additional details..."></textarea>
+         </div>
+         <div class="md:col-span-2 flex gap-3"><button type="submit" id="submit-alert-btn" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2"> <span>Save Alert</span> </button> <button type="button" id="cancel-alert-btn" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-2 rounded-lg font-semibold transition-colors"> Cancel </button>
+         </div>
+        </form>
+       </div><!-- Alerts List -->
+       <div id="alerts-list" class="space-y-3">
+        <div class="text-center py-8 text-gray-500">
+         <svg class="w-16 h-16 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+         </svg>
+         <p>No alerts logged yet. Click "Log New Alert" to add one.</p>
+        </div>
+       </div>
+      </div>
+     </div><!-- Compliance Tab -->
+     <div id="compliance-tab" class="tab-content hidden">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+       <div class="bg-white rounded-lg shadow-md p-6">
+        <h3 class="text-xl font-bold text-gray-800 mb-4">Mine Health &amp; Safety Act Compliance</h3>
+        <div id="compliance-regulations" class="space-y-4"><!-- Dynamically populated based on sensors -->
+        </div>
+        <div class="mt-6 p-4 bg-blue-50 rounded-lg">
+         <div class="text-sm text-gray-700"><strong>Overall Compliance Score:</strong> <span id="overall-compliance-score">--</span>%
+         </div>
+         <div class="text-xs text-gray-600 mt-1">
+          Last DMR Audit: 15 days ago - No major findings
+         </div>
+        </div>
+       </div>
+       <div class="bg-white rounded-lg shadow-md p-6">
+        <h3 class="text-xl font-bold text-gray-800 mb-4">Required Actions</h3>
+        <div id="required-actions-list" class="space-y-3"><!-- Dynamically populated based on sensor status -->
+        </div>
+        <div class="mt-6">
+         <h4 class="font-semibold text-gray-700 mb-3">Upcoming Inspections</h4>
+         <div class="space-y-2 text-sm">
+          <div class="flex justify-between items-center p-2 bg-gray-50 rounded"><span>DMR Site Inspection</span> <span class="text-gray-600">45 days</span>
+          </div>
+          <div class="flex justify-between items-center p-2 bg-gray-50 rounded"><span>Emergency Systems Drill</span> <span class="text-gray-600">12 days</span>
+          </div>
+          <div class="flex justify-between items-center p-2 bg-gray-50 rounded"><span>Safety Equipment Audit</span> <span class="text-gray-600">28 days</span>
+          </div>
+         </div>
+        </div>
+       </div>
+      </div><!-- Detailed Sensor Compliance Status -->
+      <div class="bg-white rounded-lg shadow-md p-6">
+       <h3 class="text-xl font-bold text-gray-800 mb-4">Equipment &amp; Sensor Compliance Status</h3>
+       <div id="sensor-compliance-details" class="space-y-4">
+        <div class="text-center py-8 text-gray-500">
+         <svg class="w-16 h-16 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+         </svg>
+         <p>No sensors connected. Add sensors to monitor compliance.</p>
+        </div>
+       </div>
+      </div>
+     </div><!-- Reports Tab -->
+     <div id="reports-tab" class="tab-content hidden">
+      <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+       <h3 class="text-xl font-bold text-gray-800 mb-4">Generate Reports</h3>
+       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-shadow">
+         <div class="flex items-center gap-3 mb-3">
+          <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center text-2xl">
+           📊
+          </div>
+          <div>
+           <div class="font-semibold text-gray-700">
+            Daily Operations Report
+           </div>
+           <div class="text-xs text-gray-500">
+            Last 24 hours summary
+           </div>
+          </div>
+         </div>
+         <p class="text-sm text-gray-600 mb-4">Comprehensive overview of all sensor readings, alerts, and system status for the past 24 hours.</p><button onclick="generateReport('Daily Operations Report', this)" class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors"> Generate Report </button>
+        </div>
+        <div class="border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-shadow">
+         <div class="flex items-center gap-3 mb-3">
+          <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center text-2xl">
+           ✓
+          </div>
+          <div>
+           <div class="font-semibold text-gray-700">
+            Compliance Report
+           </div>
+           <div class="text-xs text-gray-500">
+            Monthly compliance summary
+           </div>
+          </div>
+         </div>
+         <p class="text-sm text-gray-600 mb-4">Detailed compliance status against DMR regulations and Mine Health &amp; Safety Act requirements.</p><button onclick="generateReport('Compliance Report', this)" class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors"> Generate Report </button>
+        </div>
+        <div class="border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-shadow">
+         <div class="flex items-center gap-3 mb-3">
+          <div class="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center text-2xl">
+           ⚠️
+          </div>
+          <div>
+           <div class="font-semibold text-gray-700">
+            Incident Report
+           </div>
+           <div class="text-xs text-gray-500">
+            Critical alerts analysis
+           </div>
+          </div>
+         </div>
+         <p class="text-sm text-gray-600 mb-4">Analysis of all critical alerts, incidents, and emergency responses with corrective actions.</p><button onclick="generateReport('Incident Report', this)" class="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors"> Generate Report </button>
+        </div>
+        <div class="border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-shadow">
+         <div class="flex items-center gap-3 mb-3">
+          <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center text-2xl">
+           🔧
+          </div>
+          <div>
+           <div class="font-semibold text-gray-700">
+            Equipment Maintenance
+           </div>
+           <div class="text-xs text-gray-500">
+            Legacy equipment status
+           </div>
+          </div>
+         </div>
+         <p class="text-sm text-gray-600 mb-4">Maintenance history, performance metrics, and service recommendations for legacy machinery.</p><button onclick="generateReport('Equipment Maintenance', this)" class="w-full bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors"> Generate Report </button>
+        </div>
+       </div>
+      </div><!-- Document Upload Section -->
+      <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+       <h3 class="text-xl font-bold text-gray-800 mb-4">Upload Incident Documents</h3>
+       <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+        <div class="mb-4">
+         <svg class="w-16 h-16 mx-auto text-gray-400" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+         </svg>
+        </div>
+        <p class="text-gray-700 mb-2 font-semibold">Upload Images, PDFs, or Word Documents</p>
+        <p class="text-sm text-gray-500 mb-4">Supported formats: JPG, PNG, GIF, PDF, DOC, DOCX (Max 5MB)</p>
+        <div class="flex items-center justify-center gap-3"><label for="document-upload" class="cursor-pointer"> <input type="file" id="document-upload" accept="image/*,.pdf,.doc,.docx" class="hidden"> <span class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors inline-block"> Choose File </span> </label> <button id="upload-document-btn" onclick="uploadDocument()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors"> Upload Document </button>
+        </div>
+        <p id="file-name-display" class="text-sm text-gray-600 mt-3"></p>
+       </div>
+      </div><!-- Recent Reports and Documents -->
+      <div class="bg-white rounded-lg shadow-md p-6">
+       <h4 class="text-xl font-bold text-gray-700 mb-4">Recent Reports &amp; Documents</h4>
+       <div id="reports-list" class="space-y-2">
+        <div class="text-center py-8 text-gray-500">
+         <svg class="w-16 h-16 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+         </svg>
+         <p>No reports or documents yet. Generate a report or upload a document to get started.</p>
+        </div>
+       </div>
+      </div>
+     </div>
+    </div>
+   </main><!-- Footer -->
+   <footer class="w-full bg-gray-800 text-white py-4 px-6 mt-auto">
+    <div class="max-w-7xl mx-auto text-center">
+     <p class="text-sm">© 2024 The Makers Club - MineSphere. Real-time mining safety monitoring.</p>
+    </div>
+   </footer>
+  </div>
+  <script>
+    let allAlerts = [];
+    let allReports = [];
+    let allSensors = [];
+    let isFormSubmitting = false;
+    let isSensorFormSubmitting = false;
+
+    const defaultConfig = {
+      background_color: "#1e40af",
+      surface_color: "#ffffff",
+      text_color: "#1f2937",
+      primary_action_color: "#2563eb",
+      secondary_action_color: "#22c55e",
+      font_family: "system-ui",
+      font_size: 16,
+      dashboard_title: "MineSphere Monitor",
+      mine_name: "South African Mining Operations",
+      critical_threshold_label: "Requires Attention",
+      warning_threshold_label: "Monitor Closely"
+    };
+
+    // Data SDK Handler
+    const dataHandler = {
+      onDataChanged(data) {
+        // Separate alerts, reports, and sensors
+        allAlerts = data.filter(item => item.alert_id);
+        allReports = data.filter(item => item.report_id);
+        allSensors = data.filter(item => item.sensor_id);
+        
+        updateAlertCounts();
+        renderAlerts();
+        renderReports();
+        renderSensors();
+        renderDeviceSensorsList();
+        renderOverviewSensors();
+        renderComplianceStatus();
+      }
+    };
+
+    // Initialize Data SDK
+    async function initDataSdk() {
+      if (window.dataSdk) {
+        const result = await window.dataSdk.init(dataHandler);
+        if (!result.isOk) {
+          console.error("Failed to initialize Data SDK");
+        }
+      }
+    }
+
+    // Update alert counts
+    function updateAlertCounts() {
+      const criticalCount = allAlerts.filter(a => a.severity === 'Critical' && a.status === 'Active').length;
+      const warningCount = allAlerts.filter(a => a.severity === 'Warning' && a.status === 'Active').length;
+      
+      document.getElementById('critical-alerts').textContent = criticalCount;
+      document.getElementById('warning-alerts').textContent = warningCount;
+      
+      const activeDevices = allSensors.filter(s => s.is_active).length;
+      document.getElementById('active-devices').textContent = activeDevices;
+      document.getElementById('active-sensor-count').textContent = activeDevices;
+    }
+
+    // Render overview sensors by category
+    function renderOverviewSensors() {
+      const activeSensors = allSensors.filter(s => s.is_active);
+      
+      // Environmental sensors (Temperature, Humidity, Air Quality)
+      const environmentalCategories = ['Temperature', 'Humidity', 'Air Quality'];
+      const environmentalSensors = activeSensors.filter(s => environmentalCategories.includes(s.sensor_category));
+      renderCategorySensors('environmental-readings', environmentalSensors, 'environmental');
+      
+      // Gas detection sensors
+      const gasSensors = activeSensors.filter(s => s.sensor_category === 'Gas Detection');
+      renderCategorySensors('gas-readings', gasSensors, 'gas');
+      
+      // Equipment sensors (Vibration, Pressure, Motion, Other)
+      const equipmentCategories = ['Vibration', 'Pressure', 'Motion', 'Other'];
+      const equipmentSensors = activeSensors.filter(s => equipmentCategories.includes(s.sensor_category));
+      renderEquipmentSensors(equipmentSensors);
+    }
+
+    // Render sensors for a specific category
+    function renderCategorySensors(containerId, sensors, type) {
+      const container = document.getElementById(containerId);
+      
+      if (sensors.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-4 text-gray-500">
+            <p class="text-sm">No ${type} sensors connected</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = sensors.map(sensor => {
+        const reading = parseFloat(sensor.current_reading) || 0;
+        const min = sensor.min_threshold;
+        const max = sensor.max_threshold;
+        const isNormal = reading >= min && reading <= max;
+        const statusColor = isNormal ? 'text-green-600' : 'text-red-600';
+        const statusText = isNormal ? 'Normal' : 'Alert';
+
+        return `
+          <div class="flex justify-between items-center">
+            <div class="flex items-center gap-3">
+              <span class="text-2xl">${getSensorIcon(sensor.sensor_category)}</span>
+              <div>
+                <div class="font-semibold text-gray-700">${sensor.sensor_name}</div>
+                <div class="text-xs text-gray-500">${sensor.sensor_location}</div>
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="text-2xl font-bold ${statusColor}">${sensor.current_reading} ${sensor.unit}</div>
+              <div class="text-xs text-gray-500">${statusText}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Render equipment sensors
+    function renderEquipmentSensors(sensors) {
+      const container = document.getElementById('equipment-readings');
+      
+      if (sensors.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-8 text-gray-500 col-span-full">
+            <p class="text-sm">No equipment sensors connected</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = sensors.map(sensor => {
+        const reading = parseFloat(sensor.current_reading) || 0;
+        const min = sensor.min_threshold;
+        const max = sensor.max_threshold;
+        const isNormal = reading >= min && reading <= max;
+        const statusColor = isNormal ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
+        const statusText = isNormal ? 'Normal' : 'Warning';
+        const lastUpdate = sensor.last_update ? new Date(sensor.last_update).toLocaleString() : 'Never';
+
+        return `
+          <div class="border border-gray-200 rounded-lg p-4">
+            <div class="flex justify-between items-start mb-3">
+              <div>
+                <div class="font-semibold text-gray-700">${sensor.sensor_name}</div>
+                <div class="text-xs text-gray-500">${sensor.sensor_location}</div>
+              </div>
+              <span class="px-2 py-1 ${statusColor} text-xs rounded-full font-semibold">${statusText}</span>
+            </div>
+            <div class="text-sm text-gray-600">
+              <div><strong>${sensor.sensor_category}:</strong> ${sensor.current_reading} ${sensor.unit}</div>
+              <div class="text-xs text-gray-500 mt-1">Range: ${min}-${max} ${sensor.unit}</div>
+              <div class="text-xs text-gray-500">Updated: ${new Date(sensor.last_update).toLocaleTimeString()}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Get sensor icon by category
+    function getSensorIcon(category) {
+      const icons = {
+        'Gas Detection': '💨',
+        'Temperature': '🌡️',
+        'Humidity': '💧',
+        'Air Quality': '🌫️',
+        'Pressure': '⚡',
+        'Vibration': '📳',
+        'Motion': '🏃',
+        'Other': '📡'
+      };
+      return icons[category] || '📡';
+    }
+
+    // Render sensors grid (live data view)
+    function renderSensors() {
+      const sensorsGrid = document.getElementById('sensors-grid');
+      const activeSensors = allSensors.filter(s => s.is_active);
+      
+      if (activeSensors.length === 0) {
+        sensorsGrid.innerHTML = `
+          <div class="text-center py-12 col-span-full text-gray-500">
+            <svg class="w-16 h-16 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
+            </svg>
+            <p>No sensors connected yet.</p>
+            <p class="text-sm mt-1">Add IoT devices in the "IoT Devices" tab to start monitoring.</p>
+          </div>
+        `;
+        return;
+      }
+
+      sensorsGrid.innerHTML = activeSensors.map(sensor => {
+        const reading = parseFloat(sensor.current_reading) || 0;
+        const min = sensor.min_threshold;
+        const max = sensor.max_threshold;
+        const isNormal = reading >= min && reading <= max;
+        const statusColor = isNormal ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700';
+        const statusText = isNormal ? 'Normal' : 'Alert';
+        const lastUpdate = sensor.last_update ? new Date(sensor.last_update).toLocaleTimeString() : 'Never';
+
+        return `
+          <div class="border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-shadow">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-12 h-12 ${isNormal ? 'bg-green-100' : 'bg-red-100'} rounded-full flex items-center justify-center text-2xl">
+                ${getSensorIcon(sensor.sensor_category)}
+              </div>
+              <div class="flex-1">
+                <div class="font-semibold text-gray-700">${sensor.sensor_name}</div>
+                <div class="text-xs text-gray-500">${sensor.sensor_location}</div>
+              </div>
+              <span class="px-2 py-1 ${statusColor} text-xs rounded-full font-semibold">${statusText}</span>
+            </div>
+            
+            <div class="space-y-2">
+              <div class="flex justify-between items-center">
+                <span class="text-sm text-gray-600">Current Reading:</span>
+                <span class="text-2xl font-bold ${isNormal ? 'text-green-600' : 'text-red-600'}">${sensor.current_reading} ${sensor.unit}</span>
+              </div>
+              
+              <div class="text-xs text-gray-500">
+                <div class="flex justify-between">
+                  <span>Safe Range:</span>
+                  <span class="font-semibold">${min} - ${max} ${sensor.unit}</span>
+                </div>
+                <div class="flex justify-between mt-1">
+                  <span>Last Update:</span>
+                  <span class="font-semibold">${lastUpdate}</span>
+                </div>
+                <div class="flex justify-between mt-1">
+                  <span>Device ID:</span>
+                  <span class="font-mono font-semibold">${sensor.device_id}</span>
+                </div>
+              </div>
+
+              <button onclick="updateSensorReading('${sensor.__backendId}')" class="w-full mt-3 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm font-semibold transition-colors">
+                Simulate Reading Update
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Render device sensors list (management view)
+    function renderDeviceSensorsList() {
+      const deviceList = document.getElementById('device-sensors-list');
+      
+      if (allSensors.length === 0) {
+        deviceList.innerHTML = `
+          <div class="text-center py-8 text-gray-500">
+            <svg class="w-16 h-16 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+            </svg>
+            <p>No IoT sensors registered yet. Click "Add New Sensor" to connect your first device.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const sortedSensors = [...allSensors].sort((a, b) => new Date(b.last_update || 0) - new Date(a.last_update || 0));
+
+      deviceList.innerHTML = sortedSensors.map(sensor => {
+        const statusColor = sensor.is_active ? 'bg-green-500 text-white' : 'bg-gray-500 text-white';
+        const statusText = sensor.is_active ? 'Active' : 'Inactive';
+        const lastUpdate = sensor.last_update ? new Date(sensor.last_update).toLocaleString() : 'Never';
+
+        return `
+          <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+            <div class="flex justify-between items-start">
+              <div class="flex items-center gap-3 flex-1">
+                <span class="text-3xl">${getSensorIcon(sensor.sensor_category)}</span>
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="font-semibold text-gray-800">${sensor.sensor_name}</span>
+                    <span class="px-2 py-1 ${statusColor} text-xs rounded-full font-semibold">${statusText}</span>
+                  </div>
+                  <div class="text-sm text-gray-600">
+                    <div><strong>Device ID:</strong> ${sensor.device_id}</div>
+                    <div><strong>Category:</strong> ${sensor.sensor_category}</div>
+                    <div><strong>Location:</strong> ${sensor.sensor_location}</div>
+                    <div><strong>Safe Range:</strong> ${sensor.min_threshold} - ${sensor.max_threshold} ${sensor.unit}</div>
+                    <div><strong>Current Reading:</strong> ${sensor.current_reading || 'N/A'} ${sensor.unit}</div>
+                    <div class="text-xs text-gray-500 mt-1">Last Update: ${lastUpdate}</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="flex gap-2 ml-4">
+                <button onclick="${sensor.is_active ? 'deactivateSensor' : 'activateSensor'}('${sensor.__backendId}')" class="text-${sensor.is_active ? 'yellow' : 'green'}-600 hover:text-${sensor.is_active ? 'yellow' : 'green'}-700 text-sm font-semibold px-3 py-1 border border-${sensor.is_active ? 'yellow' : 'green'}-600 rounded">
+                  ${sensor.is_active ? 'Deactivate' : 'Activate'}
+                </button>
+                <button onclick="deleteSensor('${sensor.__backendId}')" class="text-red-600 hover:text-red-700 text-sm font-semibold px-3 py-1 border border-red-600 rounded">
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Update sensor reading (simulates IoT data update)
+    async function updateSensorReading(backendId) {
+      const sensor = allSensors.find(s => s.__backendId === backendId);
+      if (!sensor) return;
+
+      // Simulate new reading with some randomness
+      const min = sensor.min_threshold;
+      const max = sensor.max_threshold;
+      const range = max - min;
+      const newReading = (min + Math.random() * range * 1.2 - range * 0.1).toFixed(2);
+
+      sensor.current_reading = newReading;
+      sensor.last_update = new Date().toISOString();
+
+      const result = await window.dataSdk.update(sensor);
+      if (!result.isOk) {
+        showToast('Failed to update sensor reading', 'error');
+      } else {
+        showToast('Sensor reading updated!');
+      }
+    }
+
+    // Activate sensor
+    async function activateSensor(backendId) {
+      const sensor = allSensors.find(s => s.__backendId === backendId);
+      if (!sensor) return;
+
+      sensor.is_active = true;
+      sensor.last_update = new Date().toISOString();
+
+      const result = await window.dataSdk.update(sensor);
+      if (!result.isOk) {
+        showToast('Failed to activate sensor', 'error');
+      } else {
+        showToast('Sensor activated!');
+      }
+    }
+
+    // Deactivate sensor
+    async function deactivateSensor(backendId) {
+      const sensor = allSensors.find(s => s.__backendId === backendId);
+      if (!sensor) return;
+
+      sensor.is_active = false;
+
+      const result = await window.dataSdk.update(sensor);
+      if (!result.isOk) {
+        showToast('Failed to deactivate sensor', 'error');
+      } else {
+        showToast('Sensor deactivated!');
+      }
+    }
+
+    // Delete sensor
+    async function deleteSensor(backendId) {
+      const sensor = allSensors.find(s => s.__backendId === backendId);
+      if (!sensor) return;
+
+      const result = await window.dataSdk.delete(sensor);
+      if (!result.isOk) {
+        showToast('Failed to delete sensor', 'error');
+      } else {
+        showToast('Sensor deleted successfully!');
+      }
+    }
+
+    // Render alerts list
+    function renderAlerts() {
+      const alertsList = document.getElementById('alerts-list');
+      
+      if (allAlerts.length === 0) {
+        alertsList.innerHTML = `
+          <div class="text-center py-8 text-gray-500">
+            <svg class="w-16 h-16 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+            </svg>
+            <p>No alerts logged yet. Click "Log New Alert" to add one.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const sortedAlerts = [...allAlerts].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      
+      alertsList.innerHTML = sortedAlerts.map(alert => {
+        const severityColors = {
+          'Critical': 'bg-red-100 text-red-700 border-red-500',
+          'Warning': 'bg-yellow-100 text-yellow-700 border-yellow-500',
+          'Info': 'bg-blue-100 text-blue-700 border-blue-500'
+        };
+        
+        const statusColors = {
+          'Active': 'bg-red-500 text-white',
+          'Acknowledged': 'bg-yellow-500 text-white',
+          'Resolved': 'bg-green-500 text-white'
+        };
+        
+        const date = new Date(alert.timestamp);
+        const timeStr = date.toLocaleString();
+        
+        return `
+          <div class="alert-item border-l-4 ${severityColors[alert.severity] || severityColors['Info']} bg-white p-4 rounded-lg shadow">
+            <div class="flex justify-between items-start mb-2">
+              <div class="flex-1">
+                <div class="flex items-center gap-3 mb-2">
+                  <span class="px-3 py-1 ${statusColors[alert.status] || statusColors['Active']} text-xs rounded-full font-semibold">${alert.status}</span>
+                  <span class="text-xs text-gray-500">${timeStr}</span>
+                </div>
+                <div class="font-semibold text-gray-800">${alert.location}</div>
+                <div class="text-sm text-gray-600 mt-1">
+                  <span class="font-medium">${alert.sensor_type}</span> - ${alert.reading}
+                </div>
+                ${alert.notes ? `<div class="text-sm text-gray-500 mt-2">${alert.notes}</div>` : ''}
+              </div>
+              <div class="flex gap-2 ml-4">
+                ${alert.status === 'Active' ? `
+                  <button onclick="acknowledgeAlert('${alert.__backendId}')" class="text-yellow-600 hover:text-yellow-700 text-sm font-semibold px-3 py-1 border border-yellow-600 rounded">
+                    Acknowledge
+                  </button>
+                ` : ''}
+                ${alert.status !== 'Resolved' ? `
+                  <button onclick="resolveAlert('${alert.__backendId}')" class="text-green-600 hover:text-green-700 text-sm font-semibold px-3 py-1 border border-green-600 rounded">
+                    Resolve
+                  </button>
+                ` : ''}
+                <button onclick="deleteAlert('${alert.__backendId}')" class="text-red-600 hover:text-red-700 text-sm font-semibold px-3 py-1 border border-red-600 rounded">
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Acknowledge alert
+    async function acknowledgeAlert(backendId) {
+      const alert = allAlerts.find(a => a.__backendId === backendId);
+      if (!alert) return;
+      
+      alert.status = 'Acknowledged';
+      alert.acknowledged = true;
+      
+      const result = await window.dataSdk.update(alert);
+      if (!result.isOk) {
+        showToast('Failed to acknowledge alert', 'error');
+      }
+    }
+
+    // Resolve alert
+    async function resolveAlert(backendId) {
+      const alert = allAlerts.find(a => a.__backendId === backendId);
+      if (!alert) return;
+      
+      alert.status = 'Resolved';
+      
+      const result = await window.dataSdk.update(alert);
+      if (!result.isOk) {
+        showToast('Failed to resolve alert', 'error');
+      }
+    }
+
+    // Delete alert
+    async function deleteAlert(backendId) {
+      const alert = allAlerts.find(a => a.__backendId === backendId);
+      if (!alert) return;
+      
+      const result = await window.dataSdk.delete(alert);
+      if (!result.isOk) {
+        showToast('Failed to delete alert', 'error');
+      }
+    }
+
+    // Show toast notification
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white ${type === 'error' ? 'bg-red-500' : 'bg-green-500'} z-50`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.remove();
+      }, 3000);
+    }
+
+    // Generate report content based on type
+    function generateReportContent(reportType) {
+      const date = new Date().toLocaleDateString();
+      const time = new Date().toLocaleTimeString();
+      
+      let content = `MINESPHERE MONITORING REPORT\n`;
+      content += `=${'='.repeat(50)}\n\n`;
+      content += `Report Type: ${reportType}\n`;
+      content += `Generated: ${date} at ${time}\n`;
+      content += `Mine: ${defaultConfig.mine_name}\n\n`;
+      
+      if (reportType === 'Daily Operations Report') {
+        content += `OPERATIONAL SUMMARY - LAST 24 HOURS\n`;
+        content += `${'-'.repeat(50)}\n\n`;
+        content += `Active Devices: 57\n`;
+        content += `Critical Alerts: ${allAlerts.filter(a => a.severity === 'Critical' && a.status === 'Active').length}\n`;
+        content += `Warning Alerts: ${allAlerts.filter(a => a.severity === 'Warning' && a.status === 'Active').length}\n`;
+        content += `System Uptime: 99.8%\n\n`;
+        
+        content += `ENVIRONMENTAL READINGS:\n`;
+        content += `- Air Quality Index: 42 AQI (Good)\n`;
+        content += `- Temperature: 24°C (Optimal)\n`;
+        content += `- Humidity: 58% (Normal)\n`;
+        content += `- Methane (CH₄): 0.3% (Safe Level)\n`;
+        content += `- Carbon Monoxide: 12 ppm (Normal)\n`;
+        content += `- Dust Particles: 3.8 mg/m³ (Monitoring)\n\n`;
+        
+      } else if (reportType === 'Compliance Report') {
+        content += `MINE HEALTH & SAFETY ACT COMPLIANCE\n`;
+        content += `${'-'.repeat(50)}\n\n`;
+        content += `Overall Compliance Score: 98%\n\n`;
+        content += `REGULATION COMPLIANCE:\n`;
+        content += `- Ventilation Standards (DMR 2.13.1): 100%\n`;
+        content += `- Gas Monitoring (DMR 2.10.4): 98%\n`;
+        content += `- Equipment Inspection (DMR 3.5.2): 92%\n`;
+        content += `- Emergency Systems (DMR 4.2.1): 100%\n\n`;
+        content += `Last DMR Audit: 15 days ago - No major findings\n\n`;
+        
+      } else if (reportType === 'Incident Report') {
+        content += `CRITICAL ALERTS & INCIDENTS\n`;
+        content += `${'-'.repeat(50)}\n\n`;
+        const criticalAlerts = allAlerts.filter(a => a.severity === 'Critical');
+        content += `Total Critical Alerts: ${criticalAlerts.length}\n\n`;
+        
+        if (criticalAlerts.length > 0) {
+          criticalAlerts.forEach((alert, index) => {
+            content += `${index + 1}. ${alert.location}\n`;
+            content += `   Sensor: ${alert.sensor_type}\n`;
+            content += `   Reading: ${alert.reading}\n`;
+            content += `   Status: ${alert.status}\n`;
+            content += `   Time: ${new Date(alert.timestamp).toLocaleString()}\n\n`;
+          });
+        } else {
+          content += `No critical alerts in the current period.\n\n`;
+        }
+        
+      } else if (reportType === 'Equipment Maintenance') {
+        content += `LEGACY EQUIPMENT STATUS & MAINTENANCE\n`;
+        content += `${'-'.repeat(50)}\n\n`;
+        content += `VENTILATION FAN #3 (1998)\n`;
+        content += `- Status: Active\n`;
+        content += `- RPM: 1,450\n`;
+        content += `- Vibration: Normal\n`;
+        content += `- Last Service: 14 days ago\n\n`;
+        
+        content += `CONVEYOR BELT A2 (2002)\n`;
+        content += `- Status: Warning\n`;
+        content += `- Speed: 2.5 m/s\n`;
+        content += `- Tension: Elevated\n`;
+        content += `- Service Due: 3 days\n\n`;
+        
+        content += `PUMP STATION 7 (1995)\n`;
+        content += `- Status: Active\n`;
+        content += `- Pressure: 4.2 bar\n`;
+        content += `- Flow: 180 L/min\n`;
+        content += `- Efficiency: 87%\n\n`;
+      }
+      
+      content += `\n${'='.repeat(50)}\n`;
+      content += `End of Report\n`;
+      content += `Generated by MineSphere Monitoring System\n`;
+      
+      return content;
+    }
+
+    // Generate and save report
+    async function generateReport(reportType, button) {
+      if (allReports.length >= 999) {
+        showToast('Maximum limit of 999 reports reached. Please delete some reports first.', 'error');
+        return;
+      }
+
+      const originalText = button.innerHTML;
+      button.innerHTML = '<div class="loading-spinner mx-auto"></div>';
+      button.disabled = true;
+
+      const reportContent = generateReportContent(reportType);
+      const blob = new Blob([reportContent], { type: 'text/plain' });
+      const reader = new FileReader();
+      
+      reader.onloadend = async function() {
+        const base64data = reader.result.split(',')[1];
+        
+        const newReport = {
+          report_id: 'RPT-' + Date.now(),
+          report_type: reportType,
+          report_title: `${reportType} - ${new Date().toLocaleDateString()}`,
+          generated_date: new Date().toISOString(),
+          file_name: `${reportType.replace(/\s+/g, '_')}_${Date.now()}.txt`,
+          file_data: base64data,
+          file_type: 'text/plain',
+          file_size: reportContent.length
+        };
+
+        const result = await window.dataSdk.create(newReport);
+        
+        button.innerHTML = originalText;
+        button.disabled = false;
+
+        if (result.isOk) {
+          showToast('Report generated and saved successfully!');
+        } else {
+          showToast('Failed to save report', 'error');
+        }
+      };
+      
+      reader.readAsDataURL(blob);
+    }
+
+    // Download report
+    function downloadReport(reportId) {
+      const report = allReports.find(r => r.__backendId === reportId);
+      if (!report) return;
+
+      const byteCharacters = atob(report.file_data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: report.file_type });
+      
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = report.file_name;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      showToast('Report downloaded successfully!');
+    }
+
+    // Delete report
+    async function deleteReport(reportId) {
+      const report = allReports.find(r => r.__backendId === reportId);
+      if (!report) return;
+
+      const result = await window.dataSdk.delete(report);
+      if (result.isOk) {
+        showToast('Report deleted successfully!');
+      } else {
+        showToast('Failed to delete report', 'error');
+      }
+    }
+
+    // Upload document
+    async function uploadDocument() {
+      const fileInput = document.getElementById('document-upload');
+      const file = fileInput.files[0];
+      
+      if (!file) {
+        showToast('Please select a file to upload', 'error');
+        return;
+      }
+
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf', 
+                            'application/msword', 
+                            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      
+      if (!allowedTypes.includes(file.type)) {
+        showToast('File type not supported. Please upload an image, PDF, or Word document.', 'error');
+        return;
+      }
+
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        showToast('File size exceeds 5MB limit', 'error');
+        return;
+      }
+
+      if (allReports.length >= 999) {
+        showToast('Maximum limit of 999 documents reached. Please delete some documents first.', 'error');
+        return;
+      }
+
+      const uploadBtn = document.getElementById('upload-document-btn');
+      const originalText = uploadBtn.innerHTML;
+      uploadBtn.innerHTML = '<div class="loading-spinner mx-auto"></div>';
+      uploadBtn.disabled = true;
+
+      const reader = new FileReader();
+      reader.onloadend = async function() {
+        const base64data = reader.result.split(',')[1];
+        
+        const newDocument = {
+          report_id: 'DOC-' + Date.now(),
+          report_type: 'Uploaded Document',
+          report_title: file.name,
+          generated_date: new Date().toISOString(),
+          file_name: file.name,
+          file_data: base64data,
+          file_type: file.type,
+          file_size: file.size
+        };
+
+        const result = await window.dataSdk.create(newDocument);
+        
+        uploadBtn.innerHTML = originalText;
+        uploadBtn.disabled = false;
+
+        if (result.isOk) {
+          fileInput.value = '';
+          showToast('Document uploaded successfully!');
+        } else {
+          showToast('Failed to upload document', 'error');
+        }
+      };
+      
+      reader.readAsDataURL(file);
+    }
+
+    // Render reports list
+    function renderReports() {
+      const reportsList = document.getElementById('reports-list');
+      
+      if (allReports.length === 0) {
+        return; // Keep default "Recent Reports" section empty
+      }
+
+      const sortedReports = [...allReports].sort((a, b) => 
+        new Date(b.generated_date) - new Date(a.generated_date)
+      );
+      
+      reportsList.innerHTML = sortedReports.slice(0, 10).map(report => {
+        const date = new Date(report.generated_date);
+        const timeAgo = getTimeAgo(date);
+        const fileTypeIcon = getFileTypeIcon(report.file_type);
+        const fileSizeKB = (report.file_size / 1024).toFixed(1);
+        
+        return `
+          <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+            <div class="flex items-center gap-3 flex-1">
+              <span class="text-2xl">${fileTypeIcon}</span>
+              <div class="flex-1">
+                <div class="font-semibold text-gray-700 text-sm">${report.report_title}</div>
+                <div class="text-xs text-gray-500">${report.report_type} • ${fileSizeKB} KB • ${timeAgo}</div>
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="downloadReport('${report.__backendId}')" class="text-blue-600 hover:text-blue-700 text-sm font-semibold px-3 py-1 border border-blue-600 rounded">
+                Download
+              </button>
+              <button onclick="deleteReport('${report.__backendId}')" class="text-red-600 hover:text-red-700 text-sm font-semibold px-3 py-1 border border-red-600 rounded">
+                Delete
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Get file type icon
+    function getFileTypeIcon(fileType) {
+      if (fileType.startsWith('image/')) return '🖼️';
+      if (fileType === 'application/pdf') return '📄';
+      if (fileType.includes('word')) return '📝';
+      return '📎';
+    }
+
+    // Get time ago string
+    function getTimeAgo(date) {
+      const seconds = Math.floor((new Date() - date) / 1000);
+      
+      if (seconds < 60) return 'Just now';
+      if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
+      if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
+      if (seconds < 604800) return `${Math.floor(seconds / 86400)} days ago`;
+      
+      return date.toLocaleDateString();
+    }
+
+    // South African DMR Compliance Requirements
+    const complianceRequirements = {
+      'Gas Detection': {
+        regulation: 'DMR Regulation 2.10.4',
+        title: 'Gas Monitoring',
+        description: 'Continuous monitoring of methane, CO, and other hazardous gases',
+        requiredCategories: ['Gas Detection'],
+        minSensors: 2,
+        calibrationDays: 30
+      },
+      'Temperature': {
+        regulation: 'DMR Regulation 2.13.1',
+        title: 'Ventilation Standards',
+        description: 'Temperature monitoring for adequate ventilation',
+        requiredCategories: ['Temperature', 'Air Quality'],
+        minSensors: 1,
+        calibrationDays: 90
+      },
+      'Air Quality': {
+        regulation: 'DMR Regulation 2.13.1',
+        title: 'Ventilation Standards',
+        description: 'Air quality monitoring for worker safety',
+        requiredCategories: ['Air Quality', 'Temperature'],
+        minSensors: 1,
+        calibrationDays: 90
+      },
+      'Vibration': {
+        regulation: 'DMR Regulation 3.5.2',
+        title: 'Equipment Inspection',
+        description: 'Vibration monitoring for equipment integrity',
+        requiredCategories: ['Vibration', 'Pressure'],
+        minSensors: 1,
+        calibrationDays: 60
+      },
+      'Pressure': {
+        regulation: 'DMR Regulation 3.5.2',
+        title: 'Equipment Inspection',
+        description: 'Pressure monitoring for hydraulic systems',
+        requiredCategories: ['Pressure', 'Vibration'],
+        minSensors: 1,
+        calibrationDays: 60
+      }
+    };
+
+    // Calculate compliance for a specific requirement
+    function calculateComplianceForRequirement(requirement) {
+      const activeSensors = allSensors.filter(s => 
+        s.is_active && requirement.requiredCategories.includes(s.sensor_category)
+      );
+
+      if (activeSensors.length === 0) {
+        return {
+          percentage: 0,
+          status: 'non-compliant',
+          message: 'No sensors installed',
+          color: 'red',
+          bgColor: 'bg-red-50',
+          badgeColor: 'bg-red-500'
+        };
+      }
+
+      let complianceScore = 0;
+      let maxScore = 0;
+
+      // Check minimum sensor count (40% of score)
+      maxScore += 40;
+      if (activeSensors.length >= requirement.minSensors) {
+        complianceScore += 40;
+      } else {
+        complianceScore += (activeSensors.length / requirement.minSensors) * 40;
+      }
+
+      // Check sensor operational status (30% of score)
+      maxScore += 30;
+      const sensorsWithinThreshold = activeSensors.filter(s => {
+        const reading = parseFloat(s.current_reading) || 0;
+        return reading >= s.min_threshold && reading <= s.max_threshold;
+      });
+      complianceScore += (sensorsWithinThreshold.length / activeSensors.length) * 30;
+
+      // Check recent updates (30% of score - sensors updated in last 24 hours)
+      maxScore += 30;
+      const recentlyUpdated = activeSensors.filter(s => {
+        if (!s.last_update) return false;
+        const hoursSinceUpdate = (Date.now() - new Date(s.last_update).getTime()) / (1000 * 60 * 60);
+        return hoursSinceUpdate <= 24;
+      });
+      complianceScore += (recentlyUpdated.length / activeSensors.length) * 30;
+
+      const percentage = Math.round((complianceScore / maxScore) * 100);
+
+      let status, color, bgColor, badgeColor, message;
+      if (percentage >= 95) {
+        status = 'excellent';
+        color = 'green';
+        bgColor = 'bg-green-50';
+        badgeColor = 'bg-green-500';
+        message = 'Fully Compliant';
+      } else if (percentage >= 80) {
+        status = 'good';
+        color = 'green';
+        bgColor = 'bg-green-50';
+        badgeColor = 'bg-green-500';
+        message = 'Good Standing';
+      } else if (percentage >= 60) {
+        status = 'warning';
+        color = 'yellow';
+        bgColor = 'bg-yellow-50';
+        badgeColor = 'bg-yellow-500';
+        message = 'Needs Attention';
+      } else {
+        status = 'critical';
+        color = 'red';
+        bgColor = 'bg-red-50';
+        badgeColor = 'bg-red-500';
+        message = 'Non-Compliant';
+      }
+
+      return {
+        percentage,
+        status,
+        message,
+        color,
+        bgColor,
+        badgeColor,
+        activeSensors: activeSensors.length,
+        sensorsWithinThreshold: sensorsWithinThreshold.length,
+        recentlyUpdated: recentlyUpdated.length
+      };
+    }
+
+    // Render compliance status
+    function renderComplianceStatus() {
+      const regulationsContainer = document.getElementById('compliance-regulations');
+      const requiredActionsContainer = document.getElementById('required-actions-list');
+      const sensorComplianceContainer = document.getElementById('sensor-compliance-details');
+
+      if (allSensors.length === 0) {
+        regulationsContainer.innerHTML = `
+          <div class="text-center py-4 text-gray-500">
+            <p class="text-sm">Connect sensors to monitor compliance status</p>
+          </div>
+        `;
+        requiredActionsContainer.innerHTML = `
+          <div class="text-center py-4 text-gray-500">
+            <p class="text-sm">No actions required - no sensors connected</p>
+          </div>
+        `;
+        sensorComplianceContainer.innerHTML = `
+          <div class="text-center py-8 text-gray-500">
+            <svg class="w-16 h-16 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <p>No sensors connected. Add sensors to monitor compliance.</p>
+          </div>
+        `;
+        document.getElementById('overall-compliance-score').textContent = '--';
+        return;
+      }
+
+      // Calculate compliance for each requirement
+      const complianceResults = {};
+      let totalPercentage = 0;
+      let requirementCount = 0;
+
+      Object.keys(complianceRequirements).forEach(key => {
+        const requirement = complianceRequirements[key];
+        const result = calculateComplianceForRequirement(requirement);
+        
+        // Group by regulation to avoid duplicates
+        if (!complianceResults[requirement.regulation]) {
+          complianceResults[requirement.regulation] = {
+            requirement,
+            result
+          };
+          totalPercentage += result.percentage;
+          requirementCount++;
+        }
+      });
+
+      // Render regulations
+      regulationsContainer.innerHTML = Object.values(complianceResults).map(({ requirement, result }) => `
+        <div class="flex justify-between items-center p-3 ${result.bgColor} rounded-lg">
+          <div>
+            <div class="font-semibold text-gray-700">${requirement.title}</div>
+            <div class="text-xs text-gray-500">${requirement.regulation}</div>
+            <div class="text-xs text-gray-600 mt-1">${result.activeSensors} active sensors</div>
+          </div>
+          <span class="px-3 py-1 ${result.badgeColor} text-white text-sm rounded-full font-semibold">${result.percentage}%</span>
+        </div>
+      `).join('');
+
+      // Calculate overall compliance
+      const overallCompliance = requirementCount > 0 ? Math.round(totalPercentage / requirementCount) : 0;
+      document.getElementById('overall-compliance-score').textContent = overallCompliance;
+
+      // Generate required actions
+      const requiredActions = [];
+      
+      // Check for sensors out of threshold
+      const sensorsOutOfRange = allSensors.filter(s => {
+        if (!s.is_active) return false;
+        const reading = parseFloat(s.current_reading) || 0;
+        return reading < s.min_threshold || reading > s.max_threshold;
+      });
+
+      sensorsOutOfRange.forEach(sensor => {
+        requiredActions.push({
+          priority: 'critical',
+          color: 'red',
+          title: `${sensor.sensor_name} - Out of Safe Range`,
+          description: `Reading: ${sensor.current_reading} ${sensor.unit} (Safe: ${sensor.min_threshold}-${sensor.max_threshold})`,
+          location: sensor.sensor_location,
+          urgent: true
+        });
+      });
+
+      // Check for inactive sensors in required categories
+      const requiredCategories = Object.keys(complianceRequirements);
+      requiredCategories.forEach(category => {
+        const requirement = complianceRequirements[category];
+        const activeSensors = allSensors.filter(s => 
+          s.is_active && requirement.requiredCategories.includes(s.sensor_category)
+        );
+        
+        if (activeSensors.length < requirement.minSensors) {
+          requiredActions.push({
+            priority: 'high',
+            color: 'yellow',
+            title: `Insufficient ${requirement.title} Coverage`,
+            description: `${requirement.regulation} requires minimum ${requirement.minSensors} active sensors. Currently: ${activeSensors.length}`,
+            location: 'Multiple locations',
+            urgent: true
+          });
+        }
+      });
+
+      // Check for sensors needing updates
+      const staleDataThreshold = 24 * 60 * 60 * 1000; // 24 hours
+      const staleSensors = allSensors.filter(s => {
+        if (!s.is_active || !s.last_update) return false;
+        return (Date.now() - new Date(s.last_update).getTime()) > staleDataThreshold;
+      });
+
+      if (staleSensors.length > 0) {
+        requiredActions.push({
+          priority: 'medium',
+          color: 'blue',
+          title: `${staleSensors.length} Sensor(s) Need Calibration`,
+          description: `Sensors have not transmitted data in over 24 hours - calibration required`,
+          location: 'Various locations',
+          urgent: false
+        });
+      }
+
+      // Check for critical alerts
+      const activeAlerts = allAlerts.filter(a => a.severity === 'Critical' && a.status === 'Active');
+      if (activeAlerts.length > 0) {
+        requiredActions.push({
+          priority: 'critical',
+          color: 'red',
+          title: `${activeAlerts.length} Critical Alert(s) Unresolved`,
+          description: `Immediate attention required for active critical alerts`,
+          location: 'See Alerts tab',
+          urgent: true
+        });
+      }
+
+      // Render required actions
+      if (requiredActions.length === 0) {
+        requiredActionsContainer.innerHTML = `
+          <div class="border-l-4 border-green-500 pl-4 py-2">
+            <div class="font-semibold text-gray-700">All Systems Compliant</div>
+            <div class="text-sm text-gray-600 mt-1">No immediate actions required</div>
+            <div class="text-xs text-gray-500 mt-1">Status: Excellent</div>
+          </div>
+        `;
+      } else {
+        requiredActionsContainer.innerHTML = requiredActions.map(action => `
+          <div class="border-l-4 border-${action.color}-500 pl-4 py-2">
+            <div class="flex items-center gap-2">
+              <div class="font-semibold text-gray-700">${action.title}</div>
+              ${action.urgent ? '<span class="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full font-semibold">URGENT</span>' : ''}
+            </div>
+            <div class="text-sm text-gray-600 mt-1">${action.description}</div>
+            <div class="text-xs text-gray-500 mt-1">Location: ${action.location}</div>
+          </div>
+        `).join('');
+      }
+
+      // Render detailed sensor compliance
+      if (allSensors.length === 0) {
+        return;
+      }
+
+      const sensorsByCategory = {};
+      allSensors.forEach(sensor => {
+        if (!sensorsByCategory[sensor.sensor_category]) {
+          sensorsByCategory[sensor.sensor_category] = [];
+        }
+        sensorsByCategory[sensor.sensor_category].push(sensor);
+      });
+
+      sensorComplianceContainer.innerHTML = Object.entries(sensorsByCategory).map(([category, sensors]) => {
+        const requirement = complianceRequirements[category];
+        const regulationInfo = requirement 
+          ? `<div class="text-xs text-gray-500 mb-2">Regulation: ${requirement.regulation}</div>`
+          : '<div class="text-xs text-gray-500 mb-2">Standard safety monitoring</div>';
+
+        return `
+          <div class="border border-gray-200 rounded-lg p-4">
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <h4 class="font-semibold text-gray-700">${category} Sensors</h4>
+                ${regulationInfo}
+              </div>
+              <span class="text-2xl">${getSensorIcon(category)}</span>
+            </div>
+            
+            <div class="space-y-2">
+              ${sensors.map(sensor => {
+                const reading = parseFloat(sensor.current_reading) || 0;
+                const isInRange = reading >= sensor.min_threshold && reading <= sensor.max_threshold;
+                const isActive = sensor.is_active;
+                const isRecent = sensor.last_update && 
+                  (Date.now() - new Date(sensor.last_update).getTime()) <= 24 * 60 * 60 * 1000;
+
+                let statusIcon, statusText, statusColor;
+                if (!isActive) {
+                  statusIcon = '⭕';
+                  statusText = 'Inactive';
+                  statusColor = 'text-gray-500';
+                } else if (!isInRange) {
+                  statusIcon = '🔴';
+                  statusText = 'Out of Range';
+                  statusColor = 'text-red-600';
+                } else if (!isRecent) {
+                  statusIcon = '🟡';
+                  statusText = 'Needs Update';
+                  statusColor = 'text-yellow-600';
+                } else {
+                  statusIcon = '🟢';
+                  statusText = 'Compliant';
+                  statusColor = 'text-green-600';
+                }
+
+                return `
+                  <div class="flex justify-between items-center p-2 bg-gray-50 rounded text-sm">
+                    <div class="flex-1">
+                      <div class="font-medium text-gray-700">${sensor.sensor_name}</div>
+                      <div class="text-xs text-gray-500">${sensor.sensor_location}</div>
+                    </div>
+                    <div class="text-right">
+                      <div class="font-semibold ${statusColor}">${statusIcon} ${statusText}</div>
+                      <div class="text-xs text-gray-500">${sensor.current_reading} ${sensor.unit}</div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+            
+            <div class="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-600">
+              <div class="flex justify-between">
+                <span>Total Sensors:</span>
+                <span class="font-semibold">${sensors.length}</span>
+              </div>
+              <div class="flex justify-between">
+                <span>Active & Compliant:</span>
+                <span class="font-semibold">${sensors.filter(s => {
+                  const reading = parseFloat(s.current_reading) || 0;
+                  return s.is_active && reading >= s.min_threshold && reading <= s.max_threshold;
+                }).length}</span>
+              </div>
+              ${requirement ? `
+                <div class="flex justify-between">
+                  <span>Required Minimum:</span>
+                  <span class="font-semibold">${requirement.minSensors}</span>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Tab switching
+    document.querySelectorAll('.tab-button').forEach(button => {
+      button.addEventListener('click', () => {
+        const tabName = button.dataset.tab;
+        
+        // Update active button
+        document.querySelectorAll('.tab-button').forEach(btn => {
+          btn.classList.remove('active', 'text-gray-700');
+          btn.classList.add('text-gray-500');
+        });
+        button.classList.add('active', 'text-gray-700');
+        button.classList.remove('text-gray-500');
+        
+        // Show active tab content
+        document.querySelectorAll('.tab-content').forEach(content => {
+          content.classList.add('hidden');
+        });
+        document.getElementById(tabName + '-tab').classList.remove('hidden');
+      });
+    });
+
+    // Alert form handling
+    document.getElementById('add-alert-btn').addEventListener('click', () => {
+      document.getElementById('alert-form-container').classList.remove('hidden');
+    });
+
+    document.getElementById('cancel-alert-btn').addEventListener('click', () => {
+      document.getElementById('alert-form').reset();
+      document.getElementById('alert-form-container').classList.add('hidden');
+    });
+
+    document.getElementById('alert-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      if (isFormSubmitting) return;
+      
+      if (allAlerts.length >= 999) {
+        showToast('Maximum limit of 999 alerts reached. Please delete some alerts first.', 'error');
+        return;
+      }
+      
+      isFormSubmitting = true;
+      const submitBtn = document.getElementById('submit-alert-btn');
+      const originalText = submitBtn.innerHTML;
+      submitBtn.innerHTML = '<div class="loading-spinner"></div>';
+      submitBtn.disabled = true;
+      
+      const newAlert = {
+        alert_id: 'ALT-' + Date.now(),
+        timestamp: new Date().toISOString(),
+        severity: document.getElementById('alert-severity').value,
+        location: document.getElementById('alert-location').value,
+        sensor_type: document.getElementById('alert-sensor').value,
+        reading: document.getElementById('alert-reading').value,
+        status: 'Active',
+        acknowledged: false,
+        notes: document.getElementById('alert-notes').value
+      };
+      
+      const result = await window.dataSdk.create(newAlert);
+      
+      submitBtn.innerHTML = originalText;
+      submitBtn.disabled = false;
+      isFormSubmitting = false;
+      
+      if (result.isOk) {
+        document.getElementById('alert-form').reset();
+        document.getElementById('alert-form-container').classList.add('hidden');
+        showToast('Alert logged successfully');
+      } else {
+        showToast('Failed to log alert', 'error');
+      }
+    });
+
+    // Update time
+    function updateTime() {
+      const now = new Date();
+      document.getElementById('last-update-time').textContent = now.toLocaleTimeString();
+    }
+    
+    setInterval(updateTime, 1000);
+    updateTime();
+
+    // Element SDK Configuration
+    async function onConfigChange(config) {
+      const customFont = config.font_family || defaultConfig.font_family;
+      const baseFontStack = 'system-ui, -apple-system, sans-serif';
+      const baseSize = config.font_size || defaultConfig.font_size;
+      
+      // Apply fonts
+      document.body.style.fontFamily = `${customFont}, ${baseFontStack}`;
+      
+      // Apply font sizes
+      document.getElementById('dashboard-title').style.fontSize = `${baseSize * 1.5}px`;
+      document.getElementById('mine-name').style.fontSize = `${baseSize * 0.875}px`;
+      
+      // Apply text content
+      document.getElementById('dashboard-title').textContent = config.dashboard_title || defaultConfig.dashboard_title;
+      document.getElementById('mine-name').textContent = config.mine_name || defaultConfig.mine_name;
+      document.getElementById('critical-label').textContent = config.critical_threshold_label || defaultConfig.critical_threshold_label;
+      document.getElementById('warning-label').textContent = config.warning_threshold_label || defaultConfig.warning_threshold_label;
+    }
+
+    function mapToCapabilities(config) {
+      return {
+        recolorables: [
+          {
+            get: () => config.background_color || defaultConfig.background_color,
+            set: (value) => {
+              config.background_color = value;
+              window.elementSdk.setConfig({ background_color: value });
+            }
+          },
+          {
+            get: () => config.surface_color || defaultConfig.surface_color,
+            set: (value) => {
+              config.surface_color = value;
+              window.elementSdk.setConfig({ surface_color: value });
+            }
+          },
+          {
+            get: () => config.text_color || defaultConfig.text_color,
+            set: (value) => {
+              config.text_color = value;
+              window.elementSdk.setConfig({ text_color: value });
+            }
+          },
+          {
+            get: () => config.primary_action_color || defaultConfig.primary_action_color,
+            set: (value) => {
+              config.primary_action_color = value;
+              window.elementSdk.setConfig({ primary_action_color: value });
+            }
+          },
+          {
+            get: () => config.secondary_action_color || defaultConfig.secondary_action_color,
+            set: (value) => {
+              config.secondary_action_color = value;
+              window.elementSdk.setConfig({ secondary_action_color: value });
+            }
+          }
+        ],
+        borderables: [],
+        fontEditable: {
+          get: () => config.font_family || defaultConfig.font_family,
+          set: (value) => {
+            config.font_family = value;
+            window.elementSdk.setConfig({ font_family: value });
+          }
+        },
+        fontSizeable: {
+          get: () => config.font_size || defaultConfig.font_size,
+          set: (value) => {
+            config.font_size = value;
+            window.elementSdk.setConfig({ font_size: value });
+          }
+        }
+      };
+    }
+
+    function mapToEditPanelValues(config) {
+      return new Map([
+        ["dashboard_title", config.dashboard_title || defaultConfig.dashboard_title],
+        ["mine_name", config.mine_name || defaultConfig.mine_name],
+        ["critical_threshold_label", config.critical_threshold_label || defaultConfig.critical_threshold_label],
+        ["warning_threshold_label", config.warning_threshold_label || defaultConfig.warning_threshold_label]
+      ]);
+    }
+
+    // Initialize SDKs
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange,
+        mapToCapabilities,
+        mapToEditPanelValues
+      });
+    }
+
+    // Display selected file name
+    document.getElementById('document-upload').addEventListener('change', function(e) {
+      const fileDisplay = document.getElementById('file-name-display');
+      if (e.target.files.length > 0) {
+        const file = e.target.files[0];
+        const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+        fileDisplay.textContent = `Selected: ${file.name} (${fileSizeMB} MB)`;
+      } else {
+        fileDisplay.textContent = '';
+      }
+    });
+
+    // Sensor form handling
+    document.getElementById('add-sensor-btn').addEventListener('click', () => {
+      document.getElementById('sensor-form-container').classList.remove('hidden');
+    });
+
+    document.getElementById('cancel-sensor-btn').addEventListener('click', () => {
+      document.getElementById('sensor-form').reset();
+      document.getElementById('sensor-form-container').classList.add('hidden');
+    });
+
+    document.getElementById('sensor-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      if (isSensorFormSubmitting) return;
+      
+      if (allSensors.length >= 999) {
+        showToast('Maximum limit of 999 sensors reached. Please delete some sensors first.', 'error');
+        return;
+      }
+      
+      isSensorFormSubmitting = true;
+      const submitBtn = document.getElementById('submit-sensor-btn');
+      const originalText = submitBtn.innerHTML;
+      submitBtn.innerHTML = '<div class="loading-spinner"></div>';
+      submitBtn.disabled = true;
+
+      const initialReading = document.getElementById('sensor-initial-reading').value || '0';
+      
+      const newSensor = {
+        sensor_id: 'SEN-' + Date.now(),
+        sensor_name: document.getElementById('sensor-name').value,
+        device_id: document.getElementById('sensor-device-id').value,
+        sensor_category: document.getElementById('sensor-category').value,
+        sensor_location: document.getElementById('sensor-location').value,
+        unit: document.getElementById('sensor-unit').value,
+        min_threshold: parseFloat(document.getElementById('sensor-min').value),
+        max_threshold: parseFloat(document.getElementById('sensor-max').value),
+        current_reading: initialReading,
+        last_update: new Date().toISOString(),
+        is_active: true
+      };
+      
+      const result = await window.dataSdk.create(newSensor);
+      
+      submitBtn.innerHTML = originalText;
+      submitBtn.disabled = false;
+      isSensorFormSubmitting = false;
+      
+      if (result.isOk) {
+        document.getElementById('sensor-form').reset();
+        document.getElementById('sensor-form-container').classList.add('hidden');
+        showToast('Sensor registered and connected successfully!');
+      } else {
+        showToast('Failed to register sensor', 'error');
+      }
+    });
+
+    initDataSdk();
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9a8ab9da0526a148',t:'MTc2NDg0NTI0OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
